@@ -7,6 +7,8 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.GenericType;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
@@ -32,20 +34,17 @@ public class Calls {
     }
     
     
-    /*@Consumes("application/json")
-    @Produces("text/plain")
-    public Response login(User aUser) {*/
-    
     @POST
     @Path("ads")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    @Produces(MediaType.TEXT_PLAIN)
-    public Response login(@FormParam("aName") String aName, 
-                          @FormParam("aId") String aId) {
+    @Consumes("application/json")
+    @Produces("application/json")
+    public Response login(User aUser) {
         
-        //switch(userManage.checkVariables(aUser.getName(), aUser.getId())) {
-        switch(userManage.checkVariables(aName, aId)) {    
+        System.out.println(aUser.getName());
         
+        
+        switch(userManage.checkVariables(aUser.getName(), aUser.getId())) {
+           
             // para cada caso devolvido é mostrada a mensagem correspondente
             case "no_values":
                 return Response.status(Response.Status.BAD_REQUEST)
@@ -68,58 +67,65 @@ public class Calls {
                     .entity("O id pertence a outro utilizador, tente novamente.").build();
                  
             default:
-                userManage.addUser(new User(aName, aId, null));
-                //userManage.addUser(aUser);
+                userManage.addUser(aUser);
 
-                return Response.status(Response.Status.OK)
+                return Response.status(Response.Status.CREATED)
                     .entity("Login efetuado com sucesso!").build();
         }        
     }
     
-    //FIXME: Resolver o problema do logout (erro 400)
     
     @DELETE
-    @Path("ads")
+    @Path("ads/{id}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_PLAIN)
-    public Response logout(@FormParam("aName") String aName, 
-                           @FormParam("aId") String aId) {
+    public Response logout(@PathParam("id") String aId) {
         
-        
-        
-        //switch(userManage.checkVariables(aUser.getName(), aUser.getId())) {
-        switch(userManage.checkVariables(aName, aId)) {    
-        
-            // para cada caso devolvido é mostrada a mensagem correspondente
-            case "no_values":
-                return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("Por favor introduza valores e tente novamente.").build();
-                
-            case "no_name":
-                return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("O nome é nulo, tente novamente.").build();
-                
-            case "no_id":
-                return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("O id é nulo, tente novamente.").build();
-                
-            case "both":
-                return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("O utilizador já existe na lista, tente novamente.").build();
-                
-            case "id":
-                return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("O id pertence a outro utilizador, tente novamente.").build();
-                 
-            default:
-                User user = new User(aName, aId, null);
-                if (userManage.removeUser(user))
-                    return Response.status(Response.Status.GONE)
-                        .entity("Logout efetuado com sucesso!").build();
-                else
-                    return Response.status(Response.Status.NOT_FOUND)
-                        .entity("O utilizador não existe!").build();
-        }        
+        if (userManage.removeUser(aId))
+            return Response.status(Response.Status.NO_CONTENT)
+                .entity("Logout efetuado com sucesso!").build();
+        else
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity("O utilizador não existe!").build();
+    }
+    
+    
+    @GET
+    @Path("ads")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces("application/json")
+    public Response listUsers() {   
+        return Response.status(Response.Status.OK)
+                 .entity(userManage.getUserList())
+                 .build();
+    }
+    
+    
+    @GET
+    @Path("ads/{id}")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces("application/json")
+    public Response listFiles(@PathParam("id") String aId) {   
+        for (User user : userManage.getUserList()) {
+            if (user.getId().equals(aId)) {
+                return Response.status(Response.Status.OK)
+                        .entity(user.getFiles())
+                        .build();
+            }
+        }
+    }
+    
+    
+    @PUT
+    @Path("ads")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces("application/json")
+    public Response download(@FormParam("aName") String aName,
+                             @FormParam("aFolder") String aFolder,
+                             @FormParam("aFile") String aFile) {
+        return Response.status(Response.Status.OK)
+                 .entity("O ficheiro foi transferido com sucesso!")
+                 .build();
     }
     
     //TODO: Adicionar os outros endpoints

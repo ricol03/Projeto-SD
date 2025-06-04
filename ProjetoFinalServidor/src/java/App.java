@@ -16,7 +16,7 @@ public class App extends Application {
     private Calls calls = new Calls(userManage);
     
     public App() {
-        singletons.add(new Calls(userManage));
+        singletons.add(calls);
     }    
     
     @Override

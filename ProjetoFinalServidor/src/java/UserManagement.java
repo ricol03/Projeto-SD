@@ -11,6 +11,9 @@ public class UserManagement {
     private List<User> userArray = new ArrayList<User>(NUM_USERS);
     
     public String checkVariables(String aName, String aId) {
+        
+        System.out.println(aName + " " + aId);
+        
         if (aName == null && aId == null)
             return "no_values";
         else if (aName == null)
@@ -41,16 +44,24 @@ public class UserManagement {
         }
     }
     
-    public boolean removeUser(User aUser) {
-        int i = 0;
+    public List<User> getUserList() {
+        return userArray;
+    }
+    
+    public List<String> getUserFiles(String aId) {
         for (User user : userArray) {
-            System.out.println(i);
-            if (user.getId().equals(aUser.getId())) {
-                System.out.println("chegou aqui");
+            if (user.getId().equals(aId)) {
+                return user.getFiles();
+            }
+        }
+    }
+    
+    public boolean removeUser(String aId) {
+        for (User user : userArray) {
+            if (user.getId().equals(aId)) {
                 userArray.remove(user);
                 return true;
             }
-            i++;
         }
         return false;
     }
