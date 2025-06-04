@@ -113,6 +113,9 @@ public class Calls {
                         .build();
             }
         }
+        return Response.status(Response.Status.OK)
+                .entity("Utilizador sem Ficheiros")
+                .build();    
     }
     
     

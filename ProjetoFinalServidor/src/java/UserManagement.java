@@ -54,6 +54,7 @@ public class UserManagement {
                 return user.getFiles();
             }
         }
+        return null;
     }
     
     public boolean removeUser(String aId) {

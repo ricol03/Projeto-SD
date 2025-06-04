@@ -22,6 +22,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
     boolean Disconnect = false;
     int id = generateId();
     Ligacao conn = null;
+    Logs logs = null;
 
     public InterfacePrincipal() {
         initComponents();
@@ -141,6 +142,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
         User_Label = new javax.swing.JLabel();
         Connection_Button = new javax.swing.JButton();
         Folder_Button = new javax.swing.JButton();
+        Logs_Button = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setResizable(false);
@@ -202,6 +204,13 @@ public class InterfacePrincipal extends javax.swing.JFrame {
             }
         });
 
+        Logs_Button.setText("Logs");
+        Logs_Button.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                Logs_ButtonActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -229,7 +238,10 @@ public class InterfacePrincipal extends javax.swing.JFrame {
                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addComponent(Port_Label, javax.swing.GroupLayout.PREFERRED_SIZE, 106, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addComponent(Port_Field, javax.swing.GroupLayout.PREFERRED_SIZE, 68, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                            .addComponent(Folder_Button))
+                            .addComponent(Folder_Button)
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addGap(118, 118, 118)
+                                .addComponent(Logs_Button)))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 45, Short.MAX_VALUE)))
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
@@ -274,7 +286,9 @@ public class InterfacePrincipal extends javax.swing.JFrame {
                         .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(jScrollPane1))
                 .addGap(18, 18, 18)
-                .addComponent(Download_Button)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(Download_Button)
+                    .addComponent(Logs_Button))
                 .addContainerGap())
         );
 
@@ -344,6 +358,11 @@ public class InterfacePrincipal extends javax.swing.JFrame {
         checkFolderSelection();
     }//GEN-LAST:event_Folder_ButtonActionPerformed
 
+    private void Logs_ButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Logs_ButtonActionPerformed
+        // TODO add your handling code here:
+        logs.setVisible(true);
+    }//GEN-LAST:event_Logs_ButtonActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -389,6 +408,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
     private javax.swing.JLabel Folder_Label2;
     private javax.swing.JTextField IP_Field;
     private javax.swing.JLabel IP_Label;
+    private javax.swing.JButton Logs_Button;
     private javax.swing.JTextField Name_Field;
     private javax.swing.JLabel Name_Label;
     private javax.swing.JTextField Port_Field;
@@ -457,6 +477,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
             if (answer.getStatus() == 201) {
                 JOptionPane.showMessageDialog(null, "Iniciada sessão com sucesso", "Informação", JOptionPane.INFORMATION_MESSAGE);
                 enableMainSection();
+                logs = new Logs();
             } else {
                 String hello = answer.readEntity(String.class);
                 
@@ -469,5 +490,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(null, "No info sent to server: " + e.getMessage());
         }
     }
+    
+    // criar uma thread que chama os endpoints listUsers listFiles logout e login
 
 }
