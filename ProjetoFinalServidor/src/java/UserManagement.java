@@ -28,6 +28,8 @@ public class UserManagement {
                     return "both";
                 else if (user.getId().equalsIgnoreCase(aId))
                     return "id";
+                else if (user.getName().equalsIgnoreCase(aName))
+                    return "name";
             }
         
         // devolve uma string vazia se as variáveis forem válidas
@@ -54,6 +56,7 @@ public class UserManagement {
                 return user.getFiles();
             }
         }
+        return null;
     }
     
     public boolean removeUser(String aId) {

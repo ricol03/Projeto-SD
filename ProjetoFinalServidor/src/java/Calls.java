@@ -65,6 +65,10 @@ public class Calls {
             case "id":
                 return Response.status(Response.Status.BAD_REQUEST)
                     .entity("O id pertence a outro utilizador, tente novamente.").build();
+                
+            case "name":
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("O nome pertence a outro utilizador, tente novamente.").build();
                  
             default:
                 userManage.addUser(aUser);
@@ -96,8 +100,8 @@ public class Calls {
     @Produces("application/json")
     public Response listUsers() {   
         return Response.status(Response.Status.OK)
-                 .entity(userManage.getUserList())
-                 .build();
+                .entity(userManage.getUserList())
+                .build();
     }
     
     
@@ -113,6 +117,7 @@ public class Calls {
                         .build();
             }
         }
+        return null;
     }
     
     
