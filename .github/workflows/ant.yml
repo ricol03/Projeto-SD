@@ -11,15 +11,22 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
+
     - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
         java-version: '21'
         distribution: 'temurin'
-    - name: Build with Ant
+
+    - name: Download Jakarta REST API JARs
+      run: |
+        mkdir -p ProjetoFinalServidor/lib
+        curl -L -o ProjetoFinalServidor/lib/jakarta.ws.rs-api.jar https://repo1.maven.org/maven2/jakarta/ws/rs/jakarta.ws.rs-api/3.1.0/jakarta.ws.rs-api-3.1.0.jar
+        curl -L -o ProjetoFinalServidor/lib/jakarta.annotation-api.jar https://repo1.maven.org/maven2/jakarta/annotation/jakarta.annotation-api/2.1.1/jakarta.annotation-api-2.1.1.jar
+
+    - name: Build with Ant (CI build)
       run: ant -noinput -buildfile ProjetoFinalServidor/ci-build.xml
+
