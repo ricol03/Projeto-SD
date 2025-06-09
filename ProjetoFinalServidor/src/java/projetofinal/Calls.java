@@ -86,7 +86,7 @@ public class Calls {
     }
     
     
-    /*@DELETE
+    @DELETE
     @Path("ads/{id}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_PLAIN)
@@ -112,7 +112,7 @@ public class Calls {
     }
     
     
-    /*@GET
+    @GET
     @Path("ads/{id}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces("application/json")
@@ -140,8 +140,14 @@ public class Calls {
 
         File file = new File(aFolder + "/" + aFile);
         
-        return Response.status(Response.Status.OK)
+        if (file.exists()) {
+            return Response.status(Response.Status.OK)
                  .entity("O ficheiro foi transferido com sucesso!")
                  .build();
-    }*/
+        } else {
+            return Response.status(Response.Status.NOT_FOUND)
+                 .entity("Ocorreu um erro!")
+                 .build();
+        }
+    }
 }
