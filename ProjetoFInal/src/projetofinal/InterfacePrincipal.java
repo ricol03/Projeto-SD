@@ -2,14 +2,14 @@ package projetofinal;
 
 import java.io.File;
 import javax.swing.JOptionPane;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.client.ClientBuilder;
 
 import java.util.Random;
 import javax.swing.DefaultListModel;
 import javax.swing.JFileChooser;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.Response;
 
 /**
  * @author Guilherme Rodrigues e Rodrigo Pereira
