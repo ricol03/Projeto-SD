@@ -40,9 +40,6 @@ public class Calls {
     @Produces("application/json")
     public Response login(User aUser) {
         
-        System.out.println(aUser.getName());
-        
-        
         switch(userManage.checkVariables(aUser.getName(), aUser.getId())) {
            
             // para cada caso devolvido é mostrada a mensagem correspondente
