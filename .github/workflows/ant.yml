@@ -24,28 +24,38 @@ jobs:
     - name: Download Jakarta REST API JARs - Server
       run: |
         mkdir -p ProjetoFinalServidor/lib
-        # curl -L -o ProjetoFinalServidor/lib/jakarta.ws.rs-api.jar https://repo1.maven.org/maven2/jakarta/ws/rs/jakarta.ws.rs-api/3.1.0/jakarta.ws.rs-api-3.1.0.jar
-        # curl -L -o ProjetoFinalServidor/lib/jakarta.annotation-api.jar https://repo1.maven.org/maven2/jakarta/annotation/jakarta.annotation-api/2.1.1/jakarta.annotation-api-2.1.1.jar
-        curl -L -o ProjetoFinalServidor/lib/javax.ws.rs-api-2.1.1.jar https://repo1.maven.org/maven2/javax/ws/rs/javax.ws.rs-api/2.1.1/javax.ws.rs-api-2.1.1.jar        
-        curl -L -o ProjetoFinalServidor/lib/javax.annotation-api-1.3.2.jar https://repo1.maven.org/maven2/javax/annotation/javax.annotation-api/1.3.2/javax.annotation-api-1.3.2.jar
+
+        # Versões jakarta
+        
+        curl -L -o ProjetoFinalServidor/lib/jakarta.ws.rs-api.jar https://repo1.maven.org/maven2/jakarta/ws/rs/jakarta.ws.rs-api/3.1.0/jakarta.ws.rs-api-3.1.0.jar
+        curl -L -o ProjetoFinalServidor/lib/jakarta.annotation-api.jar https://repo1.maven.org/maven2/jakarta/annotation/jakarta.annotation-api/2.1.1/jakarta.annotation-api-2.1.1.jar
+
+        # Versões javax
+        
+        # curl -L -o ProjetoFinalServidor/lib/javax.ws.rs-api-2.1.1.jar https://repo1.maven.org/maven2/javax/ws/rs/javax.ws.rs-api/2.1.1/javax.ws.rs-api-2.1.1.jar        
+        # curl -L -o ProjetoFinalServidor/lib/javax.annotation-api-1.3.2.jar https://repo1.maven.org/maven2/javax/annotation/javax.annotation-api/1.3.2/javax.annotation-api-1.3.2.jar
 
 
     - name: Download Jakarta REST API JARs - Client
       run: |
         mkdir -p ProjetoFInal/lib
-        # curl -L -o ProjetoFInal/lib/jakarta.ws.rs-api.jar https://repo1.maven.org/maven2/jakarta/ws/rs/jakarta.ws.rs-api/3.1.0/jakarta.ws.rs-api-3.1.0.jar
-        # curl -L -o ProjetoFInal/lib/jersey-client.jar https://repo1.maven.org/maven2/org/glassfish/jersey/core/jersey-client/3.1.3/jersey-client-3.1.3.jar
-        # curl -L -o ProjetoFInal/lib/jersey-common.jar https://repo1.maven.org/maven2/org/glassfish/jersey/core/jersey-common/3.1.3/jersey-common-3.1.3.jar
-        # curl -L -o ProjetoFInal/lib/jakarta.annotation-api.jar https://repo1.maven.org/maven2/jakarta/annotation/jakarta.annotation-api/2.1.1/jakarta.annotation-api-2.1.1.jar
-        # curl -L -o ProjetoFInal/lib/jakarta.activation-api.jar https://repo1.maven.org/maven2/jakarta/activation/jakarta.activation-api/2.1.2/jakarta.activation-api-2.1.2.jar
-        curl -L -o ProjetoFInal/lib/javax.ws.rs-api-2.1.1.jar https://repo1.maven.org/maven2/javax/ws/rs/javax.ws.rs-api/2.1.1/javax.ws.rs-api-2.1.1.jar
-        curl -L -o ProjetoFInal/lib/jersey-client-2.41.jar https://repo1.maven.org/maven2/org/glassfish/jersey/core/jersey-client/2.41/jersey-client-2.41.jar
-        curl -L -o ProjetoFInal/lib/jersey-common-2.41.jar https://repo1.maven.org/maven2/org/glassfish/jersey/core/jersey-common/2.41/jersey-common-2.41.jar
-        curl -L -o ProjetoFInal/lib/hk2-api-2.6.1.jar https://repo1.maven.org/maven2/org/glassfish/hk2/hk2-api/2.6.1/hk2-api-2.6.1.jar
-        curl -L -o ProjetoFInal/lib/hk2-utils-2.6.1.jar https://repo1.maven.org/maven2/org/glassfish/hk2/hk2-utils/2.6.1/hk2-utils-2.6.1.jar
-        curl -L -o ProjetoFInal/lib/javax.annotation-api-1.3.2.jar https://repo1.maven.org/maven2/javax/annotation/javax.annotation-api/1.3.2/javax.annotation-api-1.3.2.jar
 
-
+        # Versões jakarta
+        
+        curl -L -o ProjetoFInal/lib/jakarta.ws.rs-api.jar https://repo1.maven.org/maven2/jakarta/ws/rs/jakarta.ws.rs-api/3.1.0/jakarta.ws.rs-api-3.1.0.jar
+        curl -L -o ProjetoFInal/lib/jersey-client.jar https://repo1.maven.org/maven2/org/glassfish/jersey/core/jersey-client/3.1.3/jersey-client-3.1.3.jar
+        curl -L -o ProjetoFInal/lib/jersey-common.jar https://repo1.maven.org/maven2/org/glassfish/jersey/core/jersey-common/3.1.3/jersey-common-3.1.3.jar
+        curl -L -o ProjetoFInal/lib/jakarta.annotation-api.jar https://repo1.maven.org/maven2/jakarta/annotation/jakarta.annotation-api/2.1.1/jakarta.annotation-api-2.1.1.jar
+        curl -L -o ProjetoFInal/lib/jakarta.activation-api.jar https://repo1.maven.org/maven2/jakarta/activation/jakarta.activation-api/2.1.2/jakarta.activation-api-2.1.2.jar
+        
+        # Versões javax
+        
+        # curl -L -o ProjetoFInal/lib/javax.ws.rs-api-2.1.1.jar https://repo1.maven.org/maven2/javax/ws/rs/javax.ws.rs-api/2.1.1/javax.ws.rs-api-2.1.1.jar
+        # curl -L -o ProjetoFInal/lib/jersey-client-2.41.jar https://repo1.maven.org/maven2/org/glassfish/jersey/core/jersey-client/2.41/jersey-client-2.41.jar
+        # curl -L -o ProjetoFInal/lib/jersey-common-2.41.jar https://repo1.maven.org/maven2/org/glassfish/jersey/core/jersey-common/2.41/jersey-common-2.41.jar
+        # curl -L -o ProjetoFInal/lib/hk2-api-2.6.1.jar https://repo1.maven.org/maven2/org/glassfish/hk2/hk2-api/2.6.1/hk2-api-2.6.1.jar
+        # curl -L -o ProjetoFInal/lib/hk2-utils-2.6.1.jar https://repo1.maven.org/maven2/org/glassfish/hk2/hk2-utils/2.6.1/hk2-utils-2.6.1.jar
+        # curl -L -o ProjetoFInal/lib/javax.annotation-api-1.3.2.jar https://repo1.maven.org/maven2/javax/annotation/javax.annotation-api/1.3.2/javax.annotation-api-1.3.2.jar
 
     - name: Build with Ant (CI build) - Server
       run: ant -noinput -buildfile ProjetoFinalServidor/ci-build.xml
