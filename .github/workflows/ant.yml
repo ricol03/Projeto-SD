@@ -47,6 +47,28 @@ jobs:
         curl -L -o ProjetoFInal/lib/jersey-common.jar https://repo1.maven.org/maven2/org/glassfish/jersey/core/jersey-common/3.1.3/jersey-common-3.1.3.jar
         curl -L -o ProjetoFInal/lib/jakarta.annotation-api.jar https://repo1.maven.org/maven2/jakarta/annotation/jakarta.annotation-api/2.1.1/jakarta.annotation-api-2.1.1.jar
         curl -L -o ProjetoFInal/lib/jakarta.activation-api.jar https://repo1.maven.org/maven2/jakarta/activation/jakarta.activation-api/2.1.2/jakarta.activation-api-2.1.2.jar
+
+        curl -L -o ProjetoFInal/lib/jersey-common-2.35.jar https://repo1.maven.org/maven2/org/glassfish/jersey/core/jersey-common/2.35/jersey-common-2.35.jar
+        curl -L -o ProjetoFInal/lib/jersey-client-2.35.jar https://repo1.maven.org/maven2/org/glassfish/jersey/core/jersey-client/2.35/jersey-client-2.35.jar
+        curl -L -o ProjetoFInal/lib/jersey-server-2.35.jar https://repo1.maven.org/maven2/org/glassfish/jersey/core/jersey-server/2.35/jersey-server-2.35.jar
+        curl -L -o ProjetoFInal/lib/jakarta.inject-2.6.1.jar https://repo1.maven.org/maven2/org/glassfish/hk2/external/jakarta.inject/2.6.1/jakarta.inject-2.6.1.jar
+        curl -L -o ProjetoFInal/lib/hk2-locator-2.6.1.jar https://repo1.maven.org/maven2/org/glassfish/hk2/hk2-locator/2.6.1/hk2-locator-2.6.1.jar
+        curl -L -o ProjetoFInal/lib/jersey-media-jaxb-2.35.jar https://repo1.maven.org/maven2/org/glassfish/jersey/media/jersey-media-jaxb/2.35/jersey-media-jaxb-2.35.jar
+        curl -L -o ProjetoFInal/lib/jersey-media-sse-2.35.jar https://repo1.maven.org/maven2/org/glassfish/jersey/media/jersey-media-sse/2.35/jersey-media-sse-2.35.jar
+        curl -L -o ProjetoFInal/lib/jakarta.json-api-1.1.6.jar https://repo1.maven.org/maven2/jakarta/json/jakarta.json-api/1.1.6/jakarta.json-api-1.1.6.jar
+        curl -L -o ProjetoFInal/lib/jakarta.json-1.1.6.jar https://repo1.maven.org/maven2/jakarta/json/jakarta.json/1.1.6/jakarta.json-1.1.6.jar
+        curl -L -o ProjetoFInal/lib/jersey-hk2-2.35.jar https://repo1.maven.org/maven2/org/glassfish/jersey/inject/jersey-hk2/2.35/jersey-hk2-2.35.jar
+        curl -L -o ProjetoFInal/lib/osgi-resource-locator-1.0.3.jar https://repo1.maven.org/maven2/org/glassfish/hk2/osgi-resource-locator/1.0.3/osgi-resource-locator-1.0.3.jar
+        curl -L -o ProjetoFInal/lib/yasson-1.0.11.jar https://repo1.maven.org/maven2/org/eclipse/yasson/1.0.11/yasson-1.0.11.jar
+        curl -L -o ProjetoFInal/lib/jersey-media-json-binding-2.35.jar https://repo1.maven.org/maven2/org/glassfish/jersey/media/jersey-media-json-binding/2.35/jersey-media-json-binding-2.35.jar
+        curl -L -o ProjetoFInal/lib/jakarta.json.bind-api-1.0.2.jar https://repo1.maven.org/maven2/jakarta/json/bind/jakarta.json.bind-api/1.0.2/jakarta.json.bind-api-1.0.2.jar
+        curl -L -o ProjetoFInal/lib/jakarta.json-1.1.6-module.jar https://repo1.maven.org/maven2/jakarta/json/jakarta.json/1.1.6/jakarta.json-1.1.6-module.jar
+        curl -L -o ProjetoFInal/lib/jakarta.persistence-api-2.2.3.jar https://repo1.maven.org/maven2/jakarta/persistence/jakarta.persistence-api/2.2.3/jakarta.persistence-api-2.2.3.jar
+        curl -L -o ProjetoFInal/lib/jakarta.servlet-api-4.0.4.jar https://repo1.maven.org/maven2/jakarta/servlet/jakarta.servlet-api/4.0.4/jakarta.servlet-api-4.0.4.jar
+        curl -L -o ProjetoFInal/lib/jakarta.validation-api-2.0.2.jar https://repo1.maven.org/maven2/jakarta/validation/jakarta.validation-api/2.0.2/jakarta.validation-api-2.0.2.jar
+        curl -L -o ProjetoFInal/lib/jersey-container-servlet-core-2.35.jar https://repo1.maven.org/maven2/org/glassfish/jersey/container/jersey-container-servlet-core/2.35/jersey-container-servlet-core-2.35.jar
+        curl -L -o ProjetoFInal/lib/jersey-container-servlet-2.35.jar https://repo1.maven.org/maven2/org/glassfish/jersey/container/jersey-container-servlet/2.35/jersey-container-servlet-2.35.jar
+
         
         # Versões javax
         
