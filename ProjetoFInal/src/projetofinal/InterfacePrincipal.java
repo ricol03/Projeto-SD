@@ -2,17 +2,19 @@ package projetofinal;
 
 import java.io.File;
 import javax.swing.JOptionPane;
-import jakarta.ws.rs.client.Client;
-import jakarta.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
 
 import java.util.Random;
 import javax.swing.DefaultListModel;
 import javax.swing.JFileChooser;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.Response;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.Response;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * @author Guilherme Rodrigues e Rodrigo Pereira
+ * @author Guilherme Rodrigues e fRodrigo Pereira
  */
 public class InterfacePrincipal extends javax.swing.JFrame {
 
@@ -23,7 +25,15 @@ public class InterfacePrincipal extends javax.swing.JFrame {
     int id = generateId();
     Ligacao conn = null;
     Logs logs = null;
+    
+    //crio uma array pra meter o nome dos ficheiros
+    private List<String> ficheiros = new ArrayList<>();
+    
+    // cenas da thread
+    private volatile boolean running = false;
+    private Thread pollingThread;
 
+    
     public InterfacePrincipal() {
         initComponents();
         disableMainSection();
@@ -96,7 +106,8 @@ public class InterfacePrincipal extends javax.swing.JFrame {
         fileList(folderPath);
     }
     
-    private DefaultListModel<String> listModel = new DefaultListModel<>();
+    private DefaultListModel<String> listModel = new DefaultListModel<>(); // para ficheiros
+    private DefaultListModel<String> UserListModel = new DefaultListModel<>(); // para users
 
     public void fileList(String folderPath) {
         listModel.clear(); // limpa antes de adicionar novos
@@ -109,7 +120,12 @@ public class InterfacePrincipal extends javax.swing.JFrame {
             for (File file : files) {
                 if (file.isFile()) {
                     System.out.println("Arquivo: " + file.getName());
-                    listModel.addElement(file.getName()); // ADICIONA AO MODELO!
+                    //listModel.addElement(file.getName()); // isto era pra colocar os próprios ficheiros na lista de ficheiros e nao é isso que queremos
+                    
+                    //chamos o array global e adiciono o nome ao array
+                    ficheiros.add(file.getName());
+                    System.out.println(ficheiros);
+                    
                 }
             }
         }
@@ -338,11 +354,17 @@ public class InterfacePrincipal extends javax.swing.JFrame {
                 disableMainSection();
                 Folder_Label.setText("Sem pasta selecionada...");
                 listModel.clear();
+                UserListModel.clear();
+                stopPolling();
+                // limpar o array, nao podemos usar o null se enao da erado
+                ficheiros.clear();
             } else if (ip.isEmpty() || port.isEmpty() || name.isEmpty() || folder.equals("Sem pasta selecionada...")) {
                 JOptionPane.showMessageDialog(this, "Nome, IP, Porto e Pasta não podem estar vazios.", "Erro", JOptionPane.ERROR_MESSAGE);
             } else {
                 conn = new Ligacao(ip, port, id);
                 sendClientInfo(name, id, folder);
+                startPolling();
+
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Erro ao conectar: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -465,7 +487,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
         try {
             Client client = ClientBuilder.newClient();
             
-            User user = new User(name, String.valueOf(id), folder, null);
+            User user = new User(name, String.valueOf(id), folder, ficheiros); // a seguir a folder colocar o array
             
             String URLBuilder = "http://" + conn.getIp() + ":" + conn.getPort() + "/ProjetoFinalServidor/app/api/ads";
             
@@ -492,5 +514,154 @@ public class InterfacePrincipal extends javax.swing.JFrame {
     }
     
     // criar uma thread que chama os endpoints listUsers listFiles logout e login
+    public void startPolling() {
+        if (running) {
+            System.out.println("Já tá a correr, man!");
+            return;
+        }
 
+        running = true;
+
+        pollingThread = new Thread(() -> {
+            listModel.clear(); // limpa antes de adicionar novos
+            User_List.setModel(UserListModel); // garante que está ligado
+
+            while (running) {
+                try {
+                    Client client = ClientBuilder.newClient();
+                    String URLBuilder = "http://" + conn.getIp() + ":" + conn.getPort() + "/ProjetoFinalServidor/app/api/ads";
+
+                    Response answer = client.target(URLBuilder)
+                            .request()
+                            .accept("application/json")
+                            .get();
+
+                    if (answer.getStatus() == 200) {
+                        String jsonResponse = answer.readEntity(String.class);
+                        ListFiles(jsonResponse);
+                        System.out.println("Resposta: " + jsonResponse);
+                        
+                        
+                        // Obter o nome
+                        String regex = "[,]";
+                        String[] myArray = jsonResponse.split(regex);
+                        for (String s : myArray) {
+                            s = s.trim();
+
+                            if (s.startsWith("\"name\"")) {
+                                // Isola valor
+                                String parte = s.substring(s.indexOf(":") + 1).trim();
+                                parte = parte.replaceAll("^[\"\\{]+", "");   // remove aspas/{ início
+                                parte = parte.replaceAll("[\"\\]}]+$", "");  // remove aspas/}/] fim
+
+                                System.out.println("Nome encontrado: " + parte);
+
+                                // Adiciona só se ainda não existir
+                                if (!UserListModel.contains(parte)) {
+                                    UserListModel.addElement(parte);
+                                }
+                            }
+                        }
+                        
+                        
+                        
+                    } else {
+                        System.out.println("Falha ao buscar dados. Código: " + answer.getStatus());
+                    }
+
+                    client.close();
+                    Thread.sleep(5000);
+
+                } catch (Exception e) {
+                    System.err.println("Erro na thread: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+            
+        });
+
+        pollingThread.start();
+    }
+
+    public void stopPolling() {
+        if (!running) {
+            System.out.println("Nem tava a correr!");
+            return;
+        }
+
+        running = false;
+        try {
+            pollingThread.join(); // espera a thread morrer
+            System.out.println("Thread parada com sucesso.");
+        } catch (InterruptedException e) {
+            System.err.println("Erro ao parar a thread: " + e.getMessage());
+        }
+    }
+    
+    public void ListFiles(String jsonResponse) {
+        String nomeSelecionado = User_List.getSelectedValue();
+        System.out.println("Selecionado: " + nomeSelecionado);
+
+        if (nomeSelecionado == null || nomeSelecionado.isEmpty()) {
+            return;
+        }
+
+        // Remover os [] externos
+        jsonResponse = jsonResponse.trim();
+        if (jsonResponse.startsWith("[")) {
+            jsonResponse = jsonResponse.substring(1);
+        }
+        if (jsonResponse.endsWith("]")) {
+            jsonResponse = jsonResponse.substring(0, jsonResponse.length() - 1);
+        }
+
+        // Aqui ainda pode haver vários objetos separados por },{
+        String[] utilizadores = jsonResponse.split("\\},\\{");
+
+        for (String userJson : utilizadores) {
+            userJson = userJson.trim();
+
+            // Recolocar as chaves que foram removidas no split
+            if (!userJson.startsWith("{")) {
+                userJson = "{" + userJson;
+            }
+            if (!userJson.endsWith("}")) {
+                userJson = userJson + "}";
+            }
+
+            // extrair o nome
+            int idxName = userJson.indexOf("\"name\"");
+            int idxNameValueStart = userJson.indexOf(":", idxName) + 1;
+            int idxNameValueEnd = userJson.indexOf("\"", idxNameValueStart + 1);
+            String nomeEncontrado = userJson.substring(idxNameValueStart, idxNameValueEnd).replaceAll("\"", "").trim();
+
+            if (nomeSelecionado.equals(nomeEncontrado)) {
+                // Encontrou o user! Bora puxar os ficheiros
+
+                int idxFiles = userJson.indexOf("\"files\"");
+                int idxArrStart = userJson.indexOf("[", idxFiles);
+                int idxArrEnd = userJson.indexOf("]", idxArrStart);
+
+                if (idxArrStart != -1 && idxArrEnd != -1) {
+                    String ficheirosRaw = userJson.substring(idxArrStart + 1, idxArrEnd);
+                    String[] ficheiros = ficheirosRaw.split(",");
+
+                    listModel.clear();
+                    for (String f : ficheiros) {
+                        f = f.replaceAll("\"", "").trim();
+                        if (!f.isEmpty()) {
+                            System.out.println("Ficheiro a adicionar: [" + f + "]");
+                            listModel.addElement(f);
+                        }
+                    }
+
+                    File_List.setModel(listModel);
+                }
+
+                break;
+            }
+        }
+    }
+
+    
 }
