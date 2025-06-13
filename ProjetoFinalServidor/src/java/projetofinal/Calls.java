@@ -15,6 +15,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -37,17 +40,17 @@ public class Calls {
         userManage = aUserManagement;
     }
     
-    @GET
+    /*@GET
     @Path("ads")
     @Produces("text/plain")
     public String test() {
         return "ads endpoint is alive";
-    }
+    }*/
     
     @POST
     @Path("ads")
-    //@Consumes("application/json")
-    //@Produces("application/json")
+    @Consumes("application/json")
+    @Produces("application/json")
     public Response login(User aUser) {
         
         switch(userManage.checkVariables(aUser.getName(), aUser.getId())) {
@@ -81,7 +84,7 @@ public class Calls {
                 userManage.addUser(aUser);
 
                 return Response.status(Response.Status.CREATED)
-                    .entity("Login efetuado com sucesso!").build();
+                    .entity(new Answer(LocalDateTime.now(), (Object)"Login efetuado com sucesso!")).build();
         }        
     }
     
@@ -130,15 +133,67 @@ public class Calls {
     }
     
     
-    @PUT
-    @Path("ads")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    // pedido para transferir o ficheiro do cliente pretendido
+    @GET
+    @Path("ads/requestfile")
     @Produces("application/json")
-    public Response download(@FormParam("aName") String aName,
-                             @FormParam("aFolder") String aFolder,
-                             @FormParam("aFile") String aFile) {
+    public Response requestFile(@QueryParam("owner") String owner, @QueryParam("filename") String filename) {
+        // Tell Client B (the owner) to upload the file | falta perceber como fazer isso ^^'
+        boolean success = notifyClientToUpload(owner, filename);
 
-        File file = new File(aFolder + "/" + aFile);
+        if (success) {
+            return Response.ok("{\"message\":\"Waiting for upload...\"}").build();
+        } else {
+            return Response.status(Response.Status.BAD_REQUEST).entity("User not online or failed to notify").build();
+        }
+    }
+    
+    
+    // guarda o ficheiro temporariamente no servidor
+    @POST
+    @Path("/upload")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    public Response uploadFile(@FormDataParam("file") InputStream fileInputStream,
+                               @FormDataParam("filename") String filename,
+                               @FormDataParam("owner") String owner) {
+        // Save file to server
+        File file = new File("server_storage/" + filename);
+        Files.copy(fileInputStream, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        return Response.ok("File received").build();
+    }
+    
+
+    // busca o ficheiro guardado e devolve-o ao cliente que pediu
+    @GET
+    @Path("/download")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    public Response downloadFile(@QueryParam("filename") String filename) {
+        File file = new File("server_storage/" + filename);
+
+        if (!file.exists()) {
+            return Response.status(Response.Status.NOT_FOUND).entity("File not found").build();
+        }
+
+        return Response.ok(file, MediaType.APPLICATION_OCTET_STREAM)
+            .header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"")
+            .build();
+    }
+    
+    /*@POST
+    @Path("ads/download")
+    @Consumes("application/json")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    public Response download(FileRequest aFileRequest) {
+
+        String folder = null;
+        
+        for (User user : userManage.getUserList()) {
+            if (user.getName().equals(aFileRequest.getName())) {
+                folder = user.getFolder();
+                break;
+            }
+        
+        //File file = new File(folder + "/" + aFileRequest.getFile());
         
         if (file.exists()) {
             return Response.status(Response.Status.OK)
@@ -149,5 +204,5 @@ public class Calls {
                  .entity("Ocorreu um erro!")
                  .build();
         }
-    }
+    }*/
 }

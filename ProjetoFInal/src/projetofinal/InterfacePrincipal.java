@@ -11,7 +11,10 @@ import javax.swing.JFileChooser;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import javax.swing.SwingUtilities;
 
 /**
  * @author Guilherme Rodrigues e fRodrigo Pereira
@@ -79,6 +82,14 @@ public class InterfacePrincipal extends javax.swing.JFrame {
 
         Connection_Button.setText("Desconectar");
         Disconnect = true;
+    }
+    
+    private void enableDownloadButton() {
+        Download_Button.setEnabled(true);
+    }
+    
+    private void disableDownloadButton() {
+        Download_Button.setEnabled(false);
     }
 
     private void checkFolderSelection() {
@@ -338,7 +349,42 @@ public class InterfacePrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_Name_FieldActionPerformed
 
     private void Download_ButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Download_ButtonActionPerformed
-        // TODO add your handling code here:
+        if (File_List.isSelectionEmpty())
+            JOptionPane.showMessageDialog(this, "Não pode transferir sem ter selecionado um ficheiro!", "Erro", JOptionPane.ERROR_MESSAGE);
+        else {
+            try {
+                Client client = ClientBuilder.newClient();
+                
+                FileRequest fileRequest = new FileRequest(File_List.getSelectedValue());
+
+                //User user = new User(name, String.valueOf(id), folder, ficheiros); // a seguir a folder colocar o array
+
+                String URLBuilder = "http://" + conn.getIp() + ":" + conn.getPort() + "/ProjetoFinalServidor/app/api/ads/download";
+
+                Response answer = client.target(URLBuilder)
+                                .request()
+                                .accept("application/json")
+                                .post(Entity.json(user));
+
+                if (answer.getStatus() == 201) {
+                    JOptionPane.showMessageDialog(null, "Iniciada sessão com sucesso", "Informação", JOptionPane.INFORMATION_MESSAGE);
+                    enableMainSection();
+                    logs = new Logs();
+                    return true;
+                } else {
+                    String response = answer.readEntity(String.class);
+                    JOptionPane.showMessageDialog(null, response, "Erro", JOptionPane.OK_OPTION);
+                    return false;
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(null, "No info sent to server: " + e.getMessage());
+                return false;
+            }
+            
+            
+        }    
     }//GEN-LAST:event_Download_ButtonActionPerformed
 
     private void Connection_ButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Connection_ButtonActionPerformed
@@ -362,9 +408,8 @@ public class InterfacePrincipal extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(this, "Nome, IP, Porto e Pasta não podem estar vazios.", "Erro", JOptionPane.ERROR_MESSAGE);
             } else {
                 conn = new Ligacao(ip, port, id);
-                sendClientInfo(name, id, folder);
-                startPolling();
-
+                if (sendClientInfo(name, id, folder))
+                    startPolling();
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Erro ao conectar: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -462,9 +507,8 @@ public class InterfacePrincipal extends javax.swing.JFrame {
         if (answer.getStatus() == 204) {
             JOptionPane.showMessageDialog(null, "Logout efetuado com sucesso", "Informação", JOptionPane.INFORMATION_MESSAGE );
         } else {
-            String hello = answer.readEntity(String.class);
-            JOptionPane.showMessageDialog(null, hello, "Erro", JOptionPane.INFORMATION_MESSAGE );
-
+            String response = answer.readEntity(String.class);
+            JOptionPane.showMessageDialog(null, response, "Erro", JOptionPane.INFORMATION_MESSAGE );
         }
     }
     
@@ -483,7 +527,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
         }
     }
     
-    private void sendClientInfo(String name, int id, String folder) {
+    private boolean sendClientInfo(String name, int id, String folder) {
         try {
             Client client = ClientBuilder.newClient();
             
@@ -500,16 +544,17 @@ public class InterfacePrincipal extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(null, "Iniciada sessão com sucesso", "Informação", JOptionPane.INFORMATION_MESSAGE);
                 enableMainSection();
                 logs = new Logs();
+                return true;
             } else {
-                String hello = answer.readEntity(String.class);
-                
-                System.out.println(hello);
-                JOptionPane.showMessageDialog(null, hello, "Erro", JOptionPane.OK_OPTION);
+                String response = answer.readEntity(String.class);
+                JOptionPane.showMessageDialog(null, response, "Erro", JOptionPane.OK_OPTION);
+                return false;
             }
             
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(null, "No info sent to server: " + e.getMessage());
+            return false;
         }
     }
     
@@ -540,6 +585,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
                         String jsonResponse = answer.readEntity(String.class);
                         ListFiles(jsonResponse);
                         System.out.println("Resposta: " + jsonResponse);
+                        
                         
                         
                         // Obter o nome
@@ -599,12 +645,16 @@ public class InterfacePrincipal extends javax.swing.JFrame {
     }
     
     public void ListFiles(String jsonResponse) {
+                        enableDownloadButton();
+        
         String nomeSelecionado = User_List.getSelectedValue();
         System.out.println("Selecionado: " + nomeSelecionado);
 
         if (nomeSelecionado == null || nomeSelecionado.isEmpty()) {
             return;
         }
+        
+        
 
         // Remover os [] externos
         jsonResponse = jsonResponse.trim();

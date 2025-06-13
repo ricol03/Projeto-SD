@@ -8,8 +8,12 @@ import java.time.LocalDateTime;
 
 public class Answer {
     private LocalDateTime datetime;
-    
     private Object data;
     
+    public Answer() {}
     
+    public Answer(LocalDateTime aDateTime, Object aData) {       
+        datetime = aDateTime;
+        data = aData;
+    }
 }
