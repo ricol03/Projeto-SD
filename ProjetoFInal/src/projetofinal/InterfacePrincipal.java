@@ -1,6 +1,11 @@
 package projetofinal;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.StringReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import javax.swing.JOptionPane;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -11,35 +16,41 @@ import javax.swing.JFileChooser;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
+import javax.json.JsonValue;
 import javax.swing.SwingUtilities;
+import javax.ws.rs.core.MediaType;
 
 /**
  * @author Guilherme Rodrigues e fRodrigo Pereira
  */
 public class InterfacePrincipal extends javax.swing.JFrame {
 
-    /**
-     * Creates new form InterfacePrincipal
-     */
-    boolean Disconnect = false;
-    int id = generateId();
-    Ligacao conn = null;
-    Logs logs = null;
+    private boolean Disconnect = false;
+    private int id = generateId();
+    private Ligacao conn = null;
+    private Logs logs = null;
     
-    //crio uma array pra meter o nome dos ficheiros
+    // cria-se uma array para meter o nome dos ficheiros
     private List<String> ficheiros = new ArrayList<>();
     
-    // cenas da thread
+    // pasta associada ao utilizador selecionado
+    // private String folder = null;
+    
+    // variáveis da thread
     private volatile boolean running = false;
+    private volatile boolean runningUpload = false;
     private Thread pollingThread;
-
+    private Thread pollingUploadThread;
     
     public InterfacePrincipal() {
         initComponents();
         disableMainSection();
+        disableDownloadButton();
     }
 
     private void disableMainSection() {
@@ -131,9 +142,9 @@ public class InterfacePrincipal extends javax.swing.JFrame {
             for (File file : files) {
                 if (file.isFile()) {
                     System.out.println("Arquivo: " + file.getName());
-                    //listModel.addElement(file.getName()); // isto era pra colocar os próprios ficheiros na lista de ficheiros e nao é isso que queremos
+                    //listModel.addElement(file.getName()); // isto era para colocar os próprios ficheiros na lista de ficheiros, mas não é isso que queremos
                     
-                    //chamos o array global e adiciono o nome ao array
+                    // chamamos o array global e adiciona-se o nome ao array
                     ficheiros.add(file.getName());
                     System.out.println(ficheiros);
                     
@@ -354,36 +365,65 @@ public class InterfacePrincipal extends javax.swing.JFrame {
         else {
             try {
                 Client client = ClientBuilder.newClient();
-                
-                FileRequest fileRequest = new FileRequest(File_List.getSelectedValue());
-
-                //User user = new User(name, String.valueOf(id), folder, ficheiros); // a seguir a folder colocar o array
-
-                String URLBuilder = "http://" + conn.getIp() + ":" + conn.getPort() + "/ProjetoFinalServidor/app/api/ads/download";
+                FileRequest fileRequest = new FileRequest(User_List.getSelectedValue(), File_List.getSelectedValue());
+                String URLBuilder = "http://" + conn.getIp() + ":" + conn.getPort() + "/ProjetoFinalServidor/app/api/ads/requestfile";
 
                 Response answer = client.target(URLBuilder)
                                 .request()
                                 .accept("application/json")
-                                .post(Entity.json(user));
+                                .post(Entity.json(fileRequest));
 
-                if (answer.getStatus() == 201) {
-                    JOptionPane.showMessageDialog(null, "Iniciada sessão com sucesso", "Informação", JOptionPane.INFORMATION_MESSAGE);
-                    enableMainSection();
-                    logs = new Logs();
-                    return true;
+                if (answer.getStatus() == 200) {
+                    JOptionPane.showMessageDialog(null, answer.getEntity(), "Info", JOptionPane.INFORMATION_MESSAGE);
+                        
+                    new Thread(() -> {
+                       
+                        String URLBuilderNew = "http://" + conn.getIp() + ":" + conn.getPort() + "/ProjetoFinalServidor/app/api/ads/checkdownload";
+                        
+                        while (true) {                            
+                            
+                            try {
+                                Thread.sleep(3000);
+                                Response answer2 = client.target(URLBuilderNew)
+                                    .request()
+                                    .accept(MediaType.APPLICATION_OCTET_STREAM)
+                                    .post(Entity.json(fileRequest));
+
+                                if (answer2.getStatus() == 200) {
+                                    try (InputStream in = answer2.readEntity(InputStream.class);
+                                        FileOutputStream out = new FileOutputStream(new File(Folder_Label.getText()))) {
+
+                                        byte[] buffer = new byte[4096];
+                                        int bytesRead;
+
+                                        while ((bytesRead = in.read(buffer)) != -1) {
+                                            out.write(buffer, 0, bytesRead);
+                                        }
+
+                                        System.out.println("Download completo!");
+
+                                    } catch (Exception e) {
+                                        System.err.println("Erro ao guardar o ficheiro: " + e.getMessage());
+                                    }
+                                } else if (answer2.getStatus() == 206) {
+                                    JOptionPane.showMessageDialog(null, "Cliente a fazer upload: " + fileRequest.getName(), "Info", JOptionPane.INFORMATION_MESSAGE);
+                                } else {
+                                    System.out.println("ainda sem mensagem");
+                                }
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }).start();
+
                 } else {
-                    String response = answer.readEntity(String.class);
-                    JOptionPane.showMessageDialog(null, response, "Erro", JOptionPane.OK_OPTION);
-                    return false;
+                    JOptionPane.showMessageDialog(null, "n deu", "Error", JOptionPane.ERROR_MESSAGE);
                 }
 
             } catch (Exception e) {
                 e.printStackTrace();
                 JOptionPane.showMessageDialog(null, "No info sent to server: " + e.getMessage());
-                return false;
             }
-            
-            
         }    
     }//GEN-LAST:event_Download_ButtonActionPerformed
 
@@ -402,14 +442,17 @@ public class InterfacePrincipal extends javax.swing.JFrame {
                 listModel.clear();
                 UserListModel.clear();
                 stopPolling();
+                stopPollingUpload();
                 // limpar o array, nao podemos usar o null se enao da erado
                 ficheiros.clear();
             } else if (ip.isEmpty() || port.isEmpty() || name.isEmpty() || folder.equals("Sem pasta selecionada...")) {
                 JOptionPane.showMessageDialog(this, "Nome, IP, Porto e Pasta não podem estar vazios.", "Erro", JOptionPane.ERROR_MESSAGE);
             } else {
                 conn = new Ligacao(ip, port, id);
-                if (sendClientInfo(name, id, folder))
+                if (sendClientInfo(name, id, folder)) {
                     startPolling();
+                    startPollingUpload();
+                }
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Erro ao conectar: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -584,7 +627,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
                     if (answer.getStatus() == 200) {
                         String jsonResponse = answer.readEntity(String.class);
                         ListFiles(jsonResponse);
-                        System.out.println("Resposta: " + jsonResponse);
+                        //System.out.println("Resposta: " + jsonResponse);
                         
                         
                         
@@ -600,7 +643,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
                                 parte = parte.replaceAll("^[\"\\{]+", "");   // remove aspas/{ início
                                 parte = parte.replaceAll("[\"\\]}]+$", "");  // remove aspas/}/] fim
 
-                                System.out.println("Nome encontrado: " + parte);
+                                //System.out.println("Nome encontrado: " + parte);
 
                                 // Adiciona só se ainda não existir
                                 if (!UserListModel.contains(parte)) {
@@ -700,12 +743,15 @@ public class InterfacePrincipal extends javax.swing.JFrame {
                     for (String f : ficheiros) {
                         f = f.replaceAll("\"", "").trim();
                         if (!f.isEmpty()) {
-                            System.out.println("Ficheiro a adicionar: [" + f + "]");
+                            //System.out.println("Ficheiro a adicionar: [" + f + "]");
                             listModel.addElement(f);
                         }
                     }
 
-                    File_List.setModel(listModel);
+                    SwingUtilities.invokeLater(() -> {
+                        File_List.setModel(listModel);
+                        
+                    });
                 }
 
                 break;
@@ -713,5 +759,114 @@ public class InterfacePrincipal extends javax.swing.JFrame {
         }
     }
 
+    public void uploadFile(String aName, String aFileName) {
+        try {
+            Client client = ClientBuilder.newClient();
+            String URLBuilder = "http://" + conn.getIp() + ":" + conn.getPort() + "/ProjetoFinalServidor/app/api/ads/upload";
+
+            FileRequest fileRequest = new FileRequest(aName, aFileName);
+
+            //Response response = client.target(url)
+            //        .request(MediaType.APPLICATION_JSON)
+            //       .post(Entity.entity(fileRequest, MediaType.APPLICATION_JSON));
+
+            Response response = client.target(URLBuilder)
+                .queryParam("filename", aFileName)
+                .queryParam("name", aName)
+                .request()
+                .post(Entity.entity(Files.newInputStream(Paths.get(Folder_Label.getText() + "/" + aFileName)),
+                                    MediaType.APPLICATION_OCTET_STREAM));
+            
+            if (response.getStatus() == 200) {
+                System.out.println("Upload successful: " + aFileName);
+            } else {
+                System.err.println("Upload failed: " + response.getStatus());
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public List<FileRequest> parseResponse(String json) {
+        List<FileRequest> list = new ArrayList<>();
+
+        JsonReader reader = Json.createReader(new StringReader(json));
+        JsonArray jsonArray = reader.readArray();
+
+        for (JsonValue value : jsonArray) {
+            JsonObject obj = value.asJsonObject();
+            String name = obj.getString("name", null);
+            String file = obj.getString("file", null);
+            if (name != null && file != null) {
+                list.add(new FileRequest(name, file));
+            }
+        }
+
+        return list;
+    }
+    
+    // criar uma thread que chama os endpoint Upload
+    public void startPollingUpload() {
+        if (runningUpload) {
+            System.out.println("Já tá a correr, man!");
+            return;
+        }
+
+        runningUpload = true;
+
+        pollingUploadThread = new Thread(() -> {
+            try {
+                Client client = ClientBuilder.newClient();
+                String baseUrl = "http://" + conn.getIp() + ":" + conn.getPort() + "/ProjetoFinalServidor/app/api/ads/checkrequests";
+
+                while (true) {
+                    Response response = client.target(baseUrl)
+                        .queryParam("name", Name_Field.getText()) // clientId should be defined earlier
+                        .request()
+                        .accept("application/json")
+                        .get();
+
+                    if (response.getStatus() == 200) {
+                        System.out.println("encontrado upload possível");
+                        List<FileRequest> requests = parseResponse(response.readEntity(String.class));
+
+                        for (FileRequest req : requests) {
+                            uploadFile(req.getName(), req.getFile());  // this method should call /upload
+                        }
+                        
+                        break;
+                    } else {
+                        System.out.println("sem coisas para fazer upload");
+                    }
+
+                    Thread.sleep(5000); // avoid spamming the server
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+
+        pollingUploadThread.start();
+    }
+ 
+    public void stopPollingUpload() {
+        if (!runningUpload) {
+            System.out.println("Nem tava a correr!");
+            return;
+        }
+        
+        
+
+        runningUpload = false;
+        try {
+            pollingUploadThread.join(500); // espera a thread morrer
+            System.out.println("Thread de upload parada com sucesso.");
+        } catch (InterruptedException e) {
+            System.err.println("Erro ao parar a thread: " + e.getMessage());
+        }
+    }
     
 }
