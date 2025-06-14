@@ -26,7 +26,7 @@ import javax.swing.SwingUtilities;
 import javax.ws.rs.core.MediaType;
 
 /**
- * @author Guilherme Rodrigues e fRodrigo Pereira
+ * @author Guilherme Rodrigues e Rodrigo Pereira
  */
 public class InterfacePrincipal extends javax.swing.JFrame {
 
@@ -391,7 +391,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
 
                                 if (answer2.getStatus() == 200) {
                                     try (InputStream in = answer2.readEntity(InputStream.class);
-                                        FileOutputStream out = new FileOutputStream(new File(Folder_Label.getText()))) {
+                                        FileOutputStream out = new FileOutputStream(new File(Folder_Label.getText() + "/" + fileRequest.getFile()))) {
 
                                         byte[] buffer = new byte[4096];
                                         int bytesRead;
@@ -788,6 +788,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
         }
     }
     
+    // função que trata do json
     public List<FileRequest> parseResponse(String json) {
         List<FileRequest> list = new ArrayList<>();
 

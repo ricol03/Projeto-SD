@@ -117,7 +117,7 @@ public class Calls {
         
         if (userManage.removeUser(aId))
             return Response.status(Response.Status.NO_CONTENT)
-                .entity("Logout efetuado com sucesso!").build();
+                .entity(new Answer(LocalDateTime.now(), (Object)"Logout efetuado com sucesso!")).build();
         else
             return Response.status(Response.Status.NOT_FOUND)
                 .entity("O utilizador não existe!").build();
@@ -197,9 +197,7 @@ public class Calls {
     @Path("ads/checkdownload")
     @Produces("application/json")
     public Response checkDownload(FileRequest aFileRequest) {
-        
-        
-        
+
         for (FileRequest request : pendingRequests)
             if (request.getName().equals(aFileRequest.getName()) && request.getFile().equals(aFileRequest.getFile())) {
                 System.out.println("Request status: " + request.getStatus());
@@ -248,8 +246,8 @@ public class Calls {
     @GET
     @Path("ads/download")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    public Response downloadFile(@QueryParam("filename") String filename) {
-        File file = new File("server_storage/" + filename);
+    public Response downloadFile(@QueryParam("filename") String aFileName) {
+        File file = new File("server_storage/" + aFileName);
 
         if (!file.exists()) {
             return Response.status(Response.Status.NOT_FOUND).entity("File not found").build();
@@ -257,33 +255,8 @@ public class Calls {
 
         return Response.ok(file, MediaType.APPLICATION_OCTET_STREAM)
             .header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"")
+            .entity(new Answer(LocalDateTime.now(), null))
             .build();
     }
     
-    /*@POST
-    @Path("ads/download")
-    @Consumes("application/json")
-    @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    public Response download(FileRequest aFileRequest) {
-
-        String folder = null;
-        
-        for (User user : userManage.getUserList()) {
-            if (user.getName().equals(aFileRequest.getName())) {
-                folder = user.getFolder();
-                break;
-            }
-        
-        //File file = new File(folder + "/" + aFileRequest.getFile());
-        
-        if (file.exists()) {
-            return Response.status(Response.Status.OK)
-                 .entity("O ficheiro foi transferido com sucesso!")
-                 .build();
-        } else {
-            return Response.status(Response.Status.NOT_FOUND)
-                 .entity("Ocorreu um erro!")
-                 .build();
-        }
-    }*/
 }
