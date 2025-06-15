@@ -30,7 +30,7 @@ import javax.ws.rs.core.MediaType;
  */
 public class InterfacePrincipal extends javax.swing.JFrame {
 
-    private boolean Disconnect = false;
+        private boolean Disconnect = false;
     private int id = generateId();
     private Ligacao conn = null;
     private Logs logs = null;
@@ -59,6 +59,8 @@ public class InterfacePrincipal extends javax.swing.JFrame {
         File_List.setEnabled(false);
         File_Label.setEnabled(false);
         User_Label.setEnabled(false);
+        Download_Button.setEnabled(false);
+        Logs_Button.setEnabled(false);
         
         Folder_Button.setEnabled(true);
         Folder_Label2.setEnabled(true);
@@ -80,6 +82,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
         File_List.setEnabled(true);
         File_Label.setEnabled(true);
         User_Label.setEnabled(true);
+        Logs_Button.setEnabled(true);
 
         Folder_Button.setEnabled(false);
         Folder_Label2.setEnabled(false);
@@ -463,7 +466,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
 
         try {
             if (Disconnect) {
-                logout(id);
+                logout(name);
                 disableMainSection();
                 Folder_Label.setText("Sem pasta selecionada...");
                 listModel.clear();
@@ -564,13 +567,13 @@ public class InterfacePrincipal extends javax.swing.JFrame {
         return id;
     }
 
-    private void logout(int id) {
+    private void logout(String Name) {
         Client client = ClientBuilder.newClient();
         
         String URLBuilder = "http://" + conn.getIp() + ":" + 
                 conn.getPort() + "/ProjetoFinalServidor/app/api/ads";
         
-        Response answer = client.target(URLBuilder + "/" + id)
+        Response answer = client.target(URLBuilder + "/" + Name)
             .request()
             .delete();
         
@@ -634,18 +637,17 @@ public class InterfacePrincipal extends javax.swing.JFrame {
             System.out.println("Já tá a correr, man!");
             return;
         }
-
         running = true;
-
         pollingThread = new Thread(() -> {
-            listModel.clear(); // limpa antes de adicionar novos
-            User_List.setModel(UserListModel); // garante que está ligado
+            // Inicialização apenas uma vez
+            SwingUtilities.invokeLater(() -> {
+                User_List.setModel(UserListModel);
+            });
 
             while (running) {
                 try {
                     Client client = ClientBuilder.newClient();
                     String URLBuilder = "http://" + conn.getIp() + ":" + conn.getPort() + "/ProjetoFinalServidor/app/api/ads";
-
                     Response answer = client.target(URLBuilder)
                             .request()
                             .accept("application/json")
@@ -653,49 +655,32 @@ public class InterfacePrincipal extends javax.swing.JFrame {
 
                     if (answer.getStatus() == 200) {
                         String jsonResponse = answer.readEntity(String.class);
-                        ListFiles(jsonResponse);
-                        //System.out.println("Resposta: " + jsonResponse);
-                        
-                        
-                        
-                        // Obter o nome
-                        String regex = "[,]";
-                        String[] myArray = jsonResponse.split(regex);
-                        for (String s : myArray) {
-                            s = s.trim();
 
-                            if (s.startsWith("\"name\"")) {
-                                // Isola valor
-                                String parte = s.substring(s.indexOf(":") + 1).trim();
-                                parte = parte.replaceAll("^[\"\\{]+", "");   // remove aspas/{ início
-                                parte = parte.replaceAll("[\"\\]}]+$", "");  // remove aspas/}/] fim
+                        // Processar utilizadores
+                        updateUserList(jsonResponse);
 
-                                //System.out.println("Nome encontrado: " + parte);
-
-                                // Adiciona só se ainda não existir
-                                if (!UserListModel.contains(parte)) {
-                                    UserListModel.addElement(parte);
-                                }
-                            }
+                        // Só processar ficheiros se há utilizador selecionado
+                        String selectedUser = User_List.getSelectedValue();
+                        if (selectedUser != null && !selectedUser.isEmpty()) {
+                            updateFileList(jsonResponse, selectedUser);
+                        } else {
+                            // Limpar lista de ficheiros se não há seleção
+                            SwingUtilities.invokeLater(() -> {
+                                listModel.clear();
+                                File_List.setModel(listModel);
+                            });
                         }
-                        
-                        
-                        
                     } else {
                         System.out.println("Falha ao buscar dados. Código: " + answer.getStatus());
                     }
-
                     client.close();
                     Thread.sleep(5000);
-
                 } catch (Exception e) {
                     System.err.println("Erro na thread: " + e.getMessage());
                     e.printStackTrace();
                 }
             }
-            
         });
-
         pollingThread.start();
     }
 
@@ -704,85 +689,121 @@ public class InterfacePrincipal extends javax.swing.JFrame {
             System.out.println("Nem tava a correr!");
             return;
         }
-
         running = false;
         try {
-            pollingThread.join(); // espera a thread morrer
+            pollingThread.join();
             System.out.println("Thread parada com sucesso.");
         } catch (InterruptedException e) {
             System.err.println("Erro ao parar a thread: " + e.getMessage());
         }
     }
-    
-    public void ListFiles(String jsonResponse) {
-                        enableDownloadButton();
-        
-        String nomeSelecionado = User_List.getSelectedValue();
-        System.out.println("Selecionado: " + nomeSelecionado);
 
-        if (nomeSelecionado == null || nomeSelecionado.isEmpty()) {
-            return;
-        }
-        
-        
+    private void updateUserList(String jsonResponse) {
+        try {
+            // Processar utilizadores de forma mais segura
+            String regex = "[,]";
+            String[] myArray = jsonResponse.split(regex);
 
-        // Remover os [] externos
-        jsonResponse = jsonResponse.trim();
-        if (jsonResponse.startsWith("[")) {
-            jsonResponse = jsonResponse.substring(1);
-        }
-        if (jsonResponse.endsWith("]")) {
-            jsonResponse = jsonResponse.substring(0, jsonResponse.length() - 1);
-        }
+            for (String s : myArray) {
+                s = s.trim();
+                if (s.startsWith("\"name\"")) {
+                    String parte = s.substring(s.indexOf(":") + 1).trim();
+                    parte = parte.replaceAll("^[\"\\{]+", "");
+                    parte = parte.replaceAll("[\"\\]}]+$", "");
 
-        // Aqui ainda pode haver vários objetos separados por },{
-        String[] utilizadores = jsonResponse.split("\\},\\{");
+                    // Criar variável final para usar na lambda
+                    final String userName = parte;
 
-        for (String userJson : utilizadores) {
-            userJson = userJson.trim();
-
-            // Recolocar as chaves que foram removidas no split
-            if (!userJson.startsWith("{")) {
-                userJson = "{" + userJson;
-            }
-            if (!userJson.endsWith("}")) {
-                userJson = userJson + "}";
-            }
-
-            // extrair o nome
-            int idxName = userJson.indexOf("\"name\"");
-            int idxNameValueStart = userJson.indexOf(":", idxName) + 1;
-            int idxNameValueEnd = userJson.indexOf("\"", idxNameValueStart + 1);
-            String nomeEncontrado = userJson.substring(idxNameValueStart, idxNameValueEnd).replaceAll("\"", "").trim();
-
-            if (nomeSelecionado.equals(nomeEncontrado)) {
-                // Encontrou o user! Bora puxar os ficheiros
-
-                int idxFiles = userJson.indexOf("\"files\"");
-                int idxArrStart = userJson.indexOf("[", idxFiles);
-                int idxArrEnd = userJson.indexOf("]", idxArrStart);
-
-                if (idxArrStart != -1 && idxArrEnd != -1) {
-                    String ficheirosRaw = userJson.substring(idxArrStart + 1, idxArrEnd);
-                    String[] ficheiros = ficheirosRaw.split(",");
-
-                    listModel.clear();
-                    for (String f : ficheiros) {
-                        f = f.replaceAll("\"", "").trim();
-                        if (!f.isEmpty()) {
-                            //System.out.println("Ficheiro a adicionar: [" + f + "]");
-                            listModel.addElement(f);
-                        }
-                    }
-
+                    // Adicionar na EDT de forma thread-safe
                     SwingUtilities.invokeLater(() -> {
-                        File_List.setModel(listModel);
-                        
+                        if (!UserListModel.contains(userName)) {
+                            UserListModel.addElement(userName);
+                        }
                     });
                 }
-
-                break;
             }
+        } catch (Exception e) {
+            System.err.println("Erro ao processar lista de utilizadores: " + e.getMessage());
+        }
+    }
+
+    private void updateFileList(String jsonResponse, String selectedUser) {
+        try {
+            enableDownloadButton();
+
+            // Parse do JSON
+            jsonResponse = jsonResponse.trim();
+            if (jsonResponse.startsWith("[")) {
+                jsonResponse = jsonResponse.substring(1);
+            }
+            if (jsonResponse.endsWith("]")) {
+                jsonResponse = jsonResponse.substring(0, jsonResponse.length() - 1);
+            }
+
+            String[] utilizadores = jsonResponse.split("\\},\\{");
+            for (String userJson : utilizadores) {
+                userJson = userJson.trim();
+
+                // Recolocar as chaves
+                if (!userJson.startsWith("{")) {
+                    userJson = "{" + userJson;
+                }
+                if (!userJson.endsWith("}")) {
+                    userJson = userJson + "}";
+                }
+
+                // Extrair o nome
+                int idxName = userJson.indexOf("\"name\"");
+                if (idxName == -1) {
+                    continue;
+                }
+
+                int idxNameValueStart = userJson.indexOf(":", idxName) + 1;
+                int idxNameValueEnd = userJson.indexOf("\"", idxNameValueStart + 1);
+                if (idxNameValueStart <= 0 || idxNameValueEnd == -1) {
+                    continue;
+                }
+
+                String nomeEncontrado = userJson.substring(idxNameValueStart, idxNameValueEnd)
+                        .replaceAll("\"", "").trim();
+
+                if (selectedUser.equals(nomeEncontrado)) {
+                    // Encontrou o utilizador! Processar ficheiros
+                    int idxFiles = userJson.indexOf("\"files\"");
+                    if (idxFiles == -1) {
+                        break;
+                    }
+
+                    int idxArrStart = userJson.indexOf("[", idxFiles);
+                    int idxArrEnd = userJson.indexOf("]", idxArrStart);
+
+                    if (idxArrStart != -1 && idxArrEnd != -1) {
+                        String ficheirosRaw = userJson.substring(idxArrStart + 1, idxArrEnd);
+                        String[] ficheiros = ficheirosRaw.split(",");
+
+                        // Criar nova lista de ficheiros
+                        DefaultListModel<String> newListModel = new DefaultListModel<>();
+                        for (String f : ficheiros) {
+                            f = f.replaceAll("\"", "").trim();
+                            if (!f.isEmpty()) {
+                                newListModel.addElement(f);
+                            }
+                        }
+
+                        // Atualizar UI na EDT
+                        SwingUtilities.invokeLater(() -> {
+                            listModel.clear();
+                            for (int i = 0; i < newListModel.size(); i++) {
+                                listModel.addElement(newListModel.getElementAt(i));
+                            }
+                            File_List.setModel(listModel);
+                        });
+                    }
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erro ao processar lista de ficheiros: " + e.getMessage());
         }
     }
 

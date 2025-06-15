@@ -61,9 +61,9 @@ public class UserManagement {
         return null;
     }
     
-    public boolean removeUser(String aId) {
+    public boolean removeUser(String Name) {
         for (User user : userArray) {
-            if (user.getId().equals(aId)) {
+            if (user.getName().equals(Name)) {
                 userArray.remove(user);
                 return true;
             }

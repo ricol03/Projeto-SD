@@ -16,4 +16,13 @@ public class Answer {
         datetime = aDateTime;
         data = aData;
     }
+    
+    public LocalDateTime getDatetime() {
+        return datetime;
+    }
+
+    public Object getData() {
+        return data;
+    }
+
 }

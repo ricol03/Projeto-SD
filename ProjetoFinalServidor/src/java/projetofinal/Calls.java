@@ -69,6 +69,7 @@ public class Calls {
             if (!exists) {
                 pendingRequests.add(request);
                 System.out.println("Added request: " + aName + " -> " + aFileName);
+                adicionarLog("Ficheiro: " + aFileName + " a transferir para: " + aName);
                 return true;
             } else {
                 System.out.println("Request already exists.");
@@ -77,7 +78,23 @@ public class Calls {
         }
     }
     
+    // LOGS
+    private static final List<Answer> logs = new ArrayList<>();
 
+    private void adicionarLog(String mensagem) {
+        Answer log = new Answer(LocalDateTime.now(), mensagem);
+        logs.add(log);
+        System.out.println("[" + log.getDatetime() + "] " + mensagem);
+    }
+
+    // endpoint dos logs
+    @GET
+    @Path("ads/logs")
+    @Produces("application/json")
+    public Response getLogs() {
+        return Response.ok(logs).build();
+    }
+    
     @POST
     @Path("ads")
     @Consumes("application/json")
@@ -113,25 +130,28 @@ public class Calls {
                  
             default:
                 userManage.addUser(aUser);
-
+                adicionarLog("Login: " + aUser.getName());
                 return Response.status(Response.Status.CREATED)
-                    .entity(new Answer(LocalDateTime.now(), (Object)"Login efetuado com sucesso!")).build();
+                        .entity(new Answer(LocalDateTime.now(), (Object) "Login efetuado com sucesso!")).build();
         }        
     }
     
     
     @DELETE
-    @Path("ads/{id}")
+    @Path("ads/{Name}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_PLAIN)
-    public Response logout(@PathParam("id") String aId) {
-        
-        if (userManage.removeUser(aId))
+    public Response logout(@PathParam("Name") String Name) {
+
+        if (userManage.removeUser(Name)) {
+            adicionarLog("Logout: " + Name);
             return Response.status(Response.Status.NO_CONTENT)
-                .entity("Logout efetuado com sucesso!").build();
-        else
+                    .entity("Logout efetuado com sucesso!").build();
+        } else {
+            adicionarLog("Tentativa de logout falhada - utilizador não existe - Nome: " + Name);
             return Response.status(Response.Status.NOT_FOUND)
-                .entity("O utilizador não existe!").build();
+                    .entity("O utilizador não existe!").build();
+        }
     }
     
     
@@ -291,17 +311,22 @@ public class Calls {
         }*/
         
         System.out.println("Tamanho do ficheiro: " + file.length() + " bytes");
-        
-        for (FileRequest request : pendingRequests)
-            if (request.getName().equals(aName) && request.getFile().equals(aFileName)) 
+        System.out.println(aName);
+        System.out.println(aFileName);
+
+        for (FileRequest request : pendingRequests) {
+            if (request.getName().equals(aName) && request.getFile().equals(aFileName)) {
                 request.setStatus("download complete");
-        
-     
+            }
+        }
+
+        adicionarLog("Download Concluido");
+
         return Response.ok(file, MediaType.APPLICATION_OCTET_STREAM)
-                           .header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"")
-                           .build();            
+                .header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"")
+                .build();           
 
         
     }
-
+    
 }

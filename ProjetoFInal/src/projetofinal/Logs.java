@@ -4,6 +4,13 @@
  */
 package projetofinal;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  *
  * @author rodrigues
@@ -15,6 +22,7 @@ public class Logs extends javax.swing.JFrame {
      */
     public Logs() {
         initComponents();
+        startLogUpdater();
     }
 
     /**
@@ -114,4 +122,108 @@ public class Logs extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTextArea jTextArea1;
     // End of variables declaration//GEN-END:variables
+    
+    private Thread logUpdaterThread;
+    private boolean running = true;
+
+    private void startLogUpdater() {
+        logUpdaterThread = new Thread(() -> {
+            while (running) {
+                try {
+                    // Chamada ao servidor para ir buscar os logs
+                    List<String> logs = fetchLogsFromServer();
+
+                    // Atualiza a TextArea (precisa ser na thread do Swing)
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        jTextArea1.setText(""); // limpa
+                        for (String log : logs) {
+                            jTextArea1.append(log + "\n");
+                        }
+                    });
+
+                    Thread.sleep(2000); // Espera 2 segundos antes de fazer nova request
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        logUpdaterThread.start();
+    }
+
+    private void stopLogUpdater() {
+        running = false;
+        if (logUpdaterThread != null) {
+            logUpdaterThread.interrupt();
+        }
+    }
+
+    private List<String> fetchLogsFromServer() {
+        List<String> logs = new ArrayList<>();
+
+        try {
+            URL url = new URL("http://localhost:8080/ProjetoFinalServidor/app/api/ads/logs");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            StringBuilder response = new StringBuilder();
+            String inputLine;
+
+            while ((inputLine = in.readLine()) != null) {
+                response.append(inputLine);
+            }
+            in.close();
+
+            // Limpa colchetes externos e separa objetos JSON
+            String raw = response.toString().trim();
+            raw = raw.substring(1, raw.length() - 1); // tira os [ ]
+            String[] entries = raw.split("\\},\\{");
+
+            for (String entry : entries) {
+                // Garante que cada entrada começa e termina com chaves
+                entry = entry.trim();
+                if (!entry.startsWith("{")) {
+                    entry = "{" + entry;
+                }
+                if (!entry.endsWith("}")) {
+                    entry = entry + "}";
+                }
+
+                // Extrai "data":"..." e "datetime":"..."
+                String data = extractField(entry, "data");
+                String datetime = extractField(entry, "datetime");
+
+                // Extrai hora:minuto:segundo de datetime
+                String hora = "";
+                if (datetime != null && datetime.length() >= 19) {
+                    hora = datetime.substring(11, 19);
+                }
+
+                logs.add("[" + hora + "] " + data);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return logs;
+    }
+
+    // Função auxiliar pra extrair campos do JSON manualmente
+    private String extractField(String json, String fieldName) {
+        String key = "\"" + fieldName + "\":\"";
+        int start = json.indexOf(key);
+        if (start == -1) {
+            return null;
+        }
+
+        start += key.length();
+        int end = json.indexOf("\"", start);
+        if (end == -1) {
+            return null;
+        }
+
+        return json.substring(start, end);
+    }
 }
