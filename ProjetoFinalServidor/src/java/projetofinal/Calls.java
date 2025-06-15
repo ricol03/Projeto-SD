@@ -35,7 +35,9 @@ public class Calls {
     
     private UserManagement userManage;
     // lista de pedidos
-    private static final List<FileRequest> pendingRequests = new ArrayList<>();
+    private List<FileRequest> pendingRequests = new ArrayList<>();
+    File file = null;
+    //private List<File> fileList = new ArrayList<>();
 
     
     // o JAX-RS requer um construtor vazio, caso contrário não funciona
@@ -46,15 +48,24 @@ public class Calls {
         userManage = aUserManagement;
     }
     
+    public void deleteCompletedRequests() {
+        for (int i = 0; i < pendingRequests.size(); i++)
+            if (pendingRequests.get(i).getStatus().equals("download complete")) 
+                pendingRequests.remove(i);
+    }
+    
     
     public boolean notifyClientToUpload(String aName, String aFileName) {
         FileRequest request = new FileRequest(aName, aFileName);
 
         synchronized (pendingRequests) {
+            
+            deleteCompletedRequests();
+
             // verifica se existe algum pedido do mesmo ficheiro e nome do cliente
             boolean exists = pendingRequests.stream()
                 .anyMatch(r -> r.getName().equals(aName) && r.getFile().equals(aFileName));
-
+            
             if (!exists) {
                 pendingRequests.add(request);
                 System.out.println("Added request: " + aName + " -> " + aFileName);
@@ -117,7 +128,7 @@ public class Calls {
         
         if (userManage.removeUser(aId))
             return Response.status(Response.Status.NO_CONTENT)
-                .entity(new Answer(LocalDateTime.now(), (Object)"Logout efetuado com sucesso!")).build();
+                .entity("Logout efetuado com sucesso!").build();
         else
             return Response.status(Response.Status.NOT_FOUND)
                 .entity("O utilizador não existe!").build();
@@ -158,6 +169,8 @@ public class Calls {
     @Produces("application/json")
     public Response checkRequests(@QueryParam("name") String aName) {
         
+        deleteCompletedRequests();
+        
         List<FileRequest> result = new ArrayList<>();
 
         for (FileRequest request : pendingRequests)
@@ -183,6 +196,8 @@ public class Calls {
     public Response requestFile(FileRequest aFileRequest) {
         boolean success = notifyClientToUpload(aFileRequest.getName(), aFileRequest.getFile());
         
+        file = null;
+        
         if (success) {
             aFileRequest.setStatus("uploading");
             return Response.status(Response.Status.OK).entity("Waiting for upload...").build();
@@ -192,16 +207,16 @@ public class Calls {
             return Response.status(Response.Status.BAD_REQUEST).entity("User not online or failed to notify").build();
     }
     
-    // pedido para verificar o progresso do download
+    // pedido para verificar o progresso do download    
     @POST
     @Path("ads/checkdownload")
+    @Consumes("application/json")
     @Produces("application/json")
     public Response checkDownload(FileRequest aFileRequest) {
-
         for (FileRequest request : pendingRequests)
             if (request.getName().equals(aFileRequest.getName()) && request.getFile().equals(aFileRequest.getFile())) {
                 System.out.println("Request status: " + request.getStatus());
-                
+
                 if (request.getStatus().equals("uploading"))
                     return Response.status(Response.Status.PARTIAL_CONTENT).build();
                 else if (request.getStatus().equals("available for download")) 
@@ -211,6 +226,7 @@ public class Calls {
             }
         return Response.status(Response.Status.BAD_REQUEST).build();
     }
+
     
     // guarda o ficheiro temporariamente no servidor
     @POST
@@ -220,22 +236,31 @@ public class Calls {
                                @QueryParam("name") String aName,
                                InputStream inputStream) {
         
-        File dir = new File("server_storage");
-        if (!dir.exists()) {
-            dir.mkdirs(); // Create directory if it doesn't exist
-        }
         
         for (FileRequest request : pendingRequests)
             if (request.getName().equals(aName) && request.getFile().equals(aFileName)) 
                 request.setStatus("available for download");
         
         try {
-            File file = new File(dir + "/" + aFileName);
+            file = new File(aFileName);
+            //fileList.add(file);
+            
+            /*int i = 0;
+            
+            for (i = 0; i < fileList.size(); i++)
+                if (fileList.get(i).getName().equals(aFileName)) {
+                    System.out.println("chegou pá");
+                    break;
+                }
+            */
             Files.copy(inputStream, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            
+            System.out.println("(upload) File size: " + file.length() + " bytes");
+            
             return Response.status(Response.Status.OK).build();
         } catch (IOException e) {
             e.printStackTrace();
-            return Response.status(Response.Status.NOT_ACCEPTABLE).build();
+            return Response.status(Response.Status.FORBIDDEN).build();
         }
         
         
@@ -246,17 +271,37 @@ public class Calls {
     @GET
     @Path("ads/download")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    public Response downloadFile(@QueryParam("filename") String aFileName) {
-        File file = new File("server_storage/" + aFileName);
-
-        if (!file.exists()) {
-            return Response.status(Response.Status.NOT_FOUND).entity("File not found").build();
-        }
-
+    public Response downloadFile(@QueryParam("filename") String aFileName,
+                                 @QueryParam("name") String aName) {
+        
+        /*File file = null;
+        
+        for (int i = 0; i < fileList.size(); i++)
+            if (fileList.get(i).getName().equals(aFileName)) {
+                System.out.println("chegou pá 2");
+                file = fileList.get(i);
+                fileList.remove(i);
+                break;
+            }    
+        
+        if (file == null || !file.exists()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity("Ficheiro não foi encontrado: " + aName)
+                           .build();
+        }*/
+        
+        System.out.println("Tamanho do ficheiro: " + file.length() + " bytes");
+        
+        for (FileRequest request : pendingRequests)
+            if (request.getName().equals(aName) && request.getFile().equals(aFileName)) 
+                request.setStatus("download complete");
+        
+     
         return Response.ok(file, MediaType.APPLICATION_OCTET_STREAM)
-            .header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"")
-            .entity(new Answer(LocalDateTime.now(), null))
-            .build();
+                           .header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"")
+                           .build();            
+
+        
     }
-    
+
 }

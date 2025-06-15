@@ -26,7 +26,7 @@ import javax.swing.SwingUtilities;
 import javax.ws.rs.core.MediaType;
 
 /**
- * @author Guilherme Rodrigues e Rodrigo Pereira
+ * @author Guilherme Rodrigues e fRodrigo Pereira
  */
 public class InterfacePrincipal extends javax.swing.JFrame {
 
@@ -41,7 +41,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
     // pasta associada ao utilizador selecionado
     // private String folder = null;
     
-    // variáveis da thread
+    // variáveis da thread 
     private volatile boolean running = false;
     private volatile boolean runningUpload = false;
     private Thread pollingThread;
@@ -360,38 +360,53 @@ public class InterfacePrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_Name_FieldActionPerformed
 
     private void Download_ButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Download_ButtonActionPerformed
-        if (File_List.isSelectionEmpty())
+        if (File_List.isSelectionEmpty()) {
             JOptionPane.showMessageDialog(this, "Não pode transferir sem ter selecionado um ficheiro!", "Erro", JOptionPane.ERROR_MESSAGE);
-        else {
-            try {
-                Client client = ClientBuilder.newClient();
-                FileRequest fileRequest = new FileRequest(User_List.getSelectedValue(), File_List.getSelectedValue());
-                String URLBuilder = "http://" + conn.getIp() + ":" + conn.getPort() + "/ProjetoFinalServidor/app/api/ads/requestfile";
+            return;
+        }
 
-                Response answer = client.target(URLBuilder)
-                                .request()
-                                .accept("application/json")
-                                .post(Entity.json(fileRequest));
+        try {
+            Client client = ClientBuilder.newClient();
+            FileRequest fileRequest = new FileRequest(User_List.getSelectedValue(), File_List.getSelectedValue());
+            String URLBuilder = "http://" + conn.getIp() + ":" + conn.getPort() + "/ProjetoFinalServidor/app/api/ads/requestfile";
 
-                if (answer.getStatus() == 200) {
-                    JOptionPane.showMessageDialog(null, answer.getEntity(), "Info", JOptionPane.INFORMATION_MESSAGE);
-                        
-                    new Thread(() -> {
-                       
-                        String URLBuilderNew = "http://" + conn.getIp() + ":" + conn.getPort() + "/ProjetoFinalServidor/app/api/ads/checkdownload";
-                        
-                        while (true) {                            
-                            
-                            try {
-                                Thread.sleep(3000);
-                                Response answer2 = client.target(URLBuilderNew)
+            Response answer = client.target(URLBuilder)
+                    .request()
+                    .accept("application/json")
+                    .post(Entity.json(fileRequest));
+
+            if (answer.getStatus() >= 200 && answer.getStatus() < 300) {
+                String respostaTexto = answer.readEntity(String.class);
+                JOptionPane.showMessageDialog(null, respostaTexto, "Info", JOptionPane.INFORMATION_MESSAGE);
+
+                new Thread(() -> {
+                    String URLBuilderNew = "http://" + conn.getIp() + ":" + conn.getPort() + "/ProjetoFinalServidor/app/api/ads/checkdownload";
+                    int tentativas = 0;
+                    final int MAX_TENTATIVAS = 10; // timeout após ~1 minuto
+
+                    while (tentativas < MAX_TENTATIVAS) {
+                        try {
+                            Thread.sleep(3000);
+                            Response answer2 = client.target(URLBuilderNew)
                                     .request()
-                                    .accept(MediaType.APPLICATION_OCTET_STREAM)
+                                    .accept("application/json")
                                     .post(Entity.json(fileRequest));
 
-                                if (answer2.getStatus() == 200) {
-                                    try (InputStream in = answer2.readEntity(InputStream.class);
-                                        FileOutputStream out = new FileOutputStream(new File(Folder_Label.getText() + "/" + fileRequest.getFile()))) {
+                            if (answer2.getStatus() == 201) {
+                                System.out.println("Download iniciado...");
+                                
+                                String URLBuilderNew2 = "http://" + conn.getIp() + ":" + conn.getPort() + "/ProjetoFinalServidor/app/api/ads/download";
+
+                                Response answer3 = client.target(URLBuilderNew2)
+                                    .request()
+                                    .accept(MediaType.APPLICATION_OCTET_STREAM)
+                                    .get();
+                                
+                                if (answer3.getStatus() == 200) {
+                                    File pastaDestino = new File(Folder_Label.getText());
+                                    File ficheiroDestino = new File(pastaDestino, fileRequest.getFile());
+
+                                    try (InputStream in = answer3.readEntity(InputStream.class); FileOutputStream out = new FileOutputStream(ficheiroDestino)) {
 
                                         byte[] buffer = new byte[4096];
                                         int bytesRead;
@@ -400,31 +415,43 @@ public class InterfacePrincipal extends javax.swing.JFrame {
                                             out.write(buffer, 0, bytesRead);
                                         }
 
-                                        System.out.println("Download completo!");
+                                        JOptionPane.showMessageDialog(null, "Download concluído: " + ficheiroDestino.getAbsolutePath(), "Info", JOptionPane.INFORMATION_MESSAGE);
+                                        
+                                        
+                                        
+                                        return;
 
                                     } catch (Exception e) {
                                         System.err.println("Erro ao guardar o ficheiro: " + e.getMessage());
                                     }
-                                } else if (answer2.getStatus() == 206) {
-                                    JOptionPane.showMessageDialog(null, "Cliente a fazer upload: " + fileRequest.getName(), "Info", JOptionPane.INFORMATION_MESSAGE);
-                                } else {
-                                    System.out.println("ainda sem mensagem");
                                 }
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
+                                
+
+                            } else if (answer2.getStatus() == 206) {
+                                System.out.println("Cliente a fazer upload: " + fileRequest.getName());
+                            } else {
+                                System.out.println("Aguardando resposta... Código: " + answer2.getStatus());
                             }
+
+                            tentativas++;
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                            break;
                         }
-                    }).start();
+                    }
 
-                } else {
-                    JOptionPane.showMessageDialog(null, "n deu", "Error", JOptionPane.ERROR_MESSAGE);
-                }
+                    JOptionPane.showMessageDialog(null, "Timeout ao aguardar o ficheiro para download.", "Erro", JOptionPane.ERROR_MESSAGE);
+                }).start();
 
-            } catch (Exception e) {
-                e.printStackTrace();
-                JOptionPane.showMessageDialog(null, "No info sent to server: " + e.getMessage());
+            } else {
+                String respostaErro = answer.readEntity(String.class);
+                JOptionPane.showMessageDialog(null, respostaErro, "Erro", JOptionPane.ERROR_MESSAGE);
             }
-        }    
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Erro ao contactar o servidor: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
     }//GEN-LAST:event_Download_ButtonActionPerformed
 
     private void Connection_ButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Connection_ButtonActionPerformed
@@ -766,10 +793,6 @@ public class InterfacePrincipal extends javax.swing.JFrame {
 
             FileRequest fileRequest = new FileRequest(aName, aFileName);
 
-            //Response response = client.target(url)
-            //        .request(MediaType.APPLICATION_JSON)
-            //       .post(Entity.entity(fileRequest, MediaType.APPLICATION_JSON));
-
             Response response = client.target(URLBuilder)
                 .queryParam("filename", aFileName)
                 .queryParam("name", aName)
@@ -788,7 +811,6 @@ public class InterfacePrincipal extends javax.swing.JFrame {
         }
     }
     
-    // função que trata do json
     public List<FileRequest> parseResponse(String json) {
         List<FileRequest> list = new ArrayList<>();
 
@@ -823,7 +845,7 @@ public class InterfacePrincipal extends javax.swing.JFrame {
 
                 while (true) {
                     Response response = client.target(baseUrl)
-                        .queryParam("name", Name_Field.getText()) // clientId should be defined earlier
+                        .queryParam("name", Name_Field.getText())
                         .request()
                         .accept("application/json")
                         .get();
@@ -831,17 +853,19 @@ public class InterfacePrincipal extends javax.swing.JFrame {
                     if (response.getStatus() == 200) {
                         System.out.println("encontrado upload possível");
                         List<FileRequest> requests = parseResponse(response.readEntity(String.class));
-
-                        for (FileRequest req : requests) {
-                            uploadFile(req.getName(), req.getFile());  // this method should call /upload
+                        
+                        if (!requests.isEmpty()) {
+                            for (FileRequest req : requests) {
+                                uploadFile(req.getName(), req.getFile());
+                            }
                         }
                         
-                        break;
+                    
                     } else {
                         System.out.println("sem coisas para fazer upload");
                     }
 
-                    Thread.sleep(5000); // avoid spamming the server
+                    Thread.sleep(5000);
                 }
 
             } catch (Exception e) {
