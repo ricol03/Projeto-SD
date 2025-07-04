@@ -3,28 +3,31 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 package projetofinal;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-
 /**
  *
  * @author rodrigues
  */
 public class Logs extends javax.swing.JFrame {
-
+    
+    private LocalDateTime startTime; // Hora de início da aplicação
+    
     /**
      * Creates new form Logs
      */
     public Logs() {
         initComponents();
+        // Captura a hora atual quando a janela é aberta
+        startTime = LocalDateTime.now();
         startLogUpdater();
     }
-
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -33,24 +36,19 @@ public class Logs extends javax.swing.JFrame {
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
-
         jScrollPane1 = new javax.swing.JScrollPane();
         jTextArea1 = new javax.swing.JTextArea();
         Close_Button = new javax.swing.JButton();
-
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-
         jTextArea1.setColumns(20);
         jTextArea1.setRows(5);
         jScrollPane1.setViewportView(jTextArea1);
-
         Close_Button.setText("Fechar");
         Close_Button.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 Close_ButtonActionPerformed(evt);
             }
         });
-
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -73,15 +71,13 @@ public class Logs extends javax.swing.JFrame {
                     .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 288, Short.MAX_VALUE))
                 .addContainerGap())
         );
-
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
     private void Close_ButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Close_ButtonActionPerformed
         // TODO add your handling code here:
+        //stopLogUpdater(); // Para o thread antes de fechar
         this.setVisible(false);
     }//GEN-LAST:event_Close_ButtonActionPerformed
-
     /**
      * @param args the command line arguments
      */
@@ -108,7 +104,6 @@ public class Logs extends javax.swing.JFrame {
             java.util.logging.Logger.getLogger(Logs.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
-
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
@@ -116,7 +111,6 @@ public class Logs extends javax.swing.JFrame {
             }
         });
     }
-
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton Close_Button;
     private javax.swing.JScrollPane jScrollPane1;
@@ -125,14 +119,13 @@ public class Logs extends javax.swing.JFrame {
     
     private Thread logUpdaterThread;
     private boolean running = true;
-
+    
     private void startLogUpdater() {
         logUpdaterThread = new Thread(() -> {
             while (running) {
                 try {
                     // Chamada ao servidor para ir buscar os logs
                     List<String> logs = fetchLogsFromServer();
-
                     // Atualiza a TextArea (precisa ser na thread do Swing)
                     javax.swing.SwingUtilities.invokeLater(() -> {
                         jTextArea1.setText(""); // limpa
@@ -140,46 +133,41 @@ public class Logs extends javax.swing.JFrame {
                             jTextArea1.append(log + "\n");
                         }
                     });
-
                     Thread.sleep(2000); // Espera 2 segundos antes de fazer nova request
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         });
-
         logUpdaterThread.start();
     }
-
+    
     private void stopLogUpdater() {
         running = false;
         if (logUpdaterThread != null) {
             logUpdaterThread.interrupt();
         }
     }
-
+    
     private List<String> fetchLogsFromServer() {
         List<String> logs = new ArrayList<>();
-
         try {
             URL url = new URL("http://localhost:8080/ProjetoFinalServidor/app/api/ads/logs");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
-
             BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             StringBuilder response = new StringBuilder();
             String inputLine;
-
             while ((inputLine = in.readLine()) != null) {
                 response.append(inputLine);
             }
             in.close();
-
+            
             // Limpa colchetes externos e separa objetos JSON
             String raw = response.toString().trim();
             raw = raw.substring(1, raw.length() - 1); // tira os [ ]
             String[] entries = raw.split("\\},\\{");
-
+            
             for (String entry : entries) {
                 // Garante que cada entrada começa e termina com chaves
                 entry = entry.trim();
@@ -189,27 +177,47 @@ public class Logs extends javax.swing.JFrame {
                 if (!entry.endsWith("}")) {
                     entry = entry + "}";
                 }
-
+                
                 // Extrai "data":"..." e "datetime":"..."
                 String data = extractField(entry, "data");
                 String datetime = extractField(entry, "datetime");
-
-                // Extrai hora:minuto:segundo de datetime
-                String hora = "";
-                if (datetime != null && datetime.length() >= 19) {
-                    hora = datetime.substring(11, 19);
+                
+                // Verifica se o log é posterior à hora de início
+                if (isLogAfterStartTime(datetime)) {
+                    // Extrai hora:minuto:segundo de datetime
+                    String hora = "";
+                    if (datetime != null && datetime.length() >= 19) {
+                        hora = datetime.substring(11, 19);
+                    }
+                    logs.add("[" + hora + "] " + data);
                 }
-
-                logs.add("[" + hora + "] " + data);
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         return logs;
     }
-
+    
+    // Verifica se o log é posterior à hora de início da aplicação
+    private boolean isLogAfterStartTime(String datetime) {
+        try {
+            if (datetime == null || datetime.length() < 19) {
+                return false;
+            }
+            
+            // Formato esperado: "2024-12-15T14:30:25" ou similar
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+            LocalDateTime logTime = LocalDateTime.parse(datetime.substring(0, 19), formatter);
+            
+            // Retorna true se o log for posterior à hora de início
+            return logTime.isAfter(startTime);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false; // Em caso de erro, não mostra o log
+        }
+    }
+    
     // Função auxiliar pra extrair campos do JSON manualmente
     private String extractField(String json, String fieldName) {
         String key = "\"" + fieldName + "\":\"";
@@ -217,13 +225,11 @@ public class Logs extends javax.swing.JFrame {
         if (start == -1) {
             return null;
         }
-
         start += key.length();
         int end = json.indexOf("\"", start);
         if (end == -1) {
             return null;
         }
-
         return json.substring(start, end);
     }
 }
